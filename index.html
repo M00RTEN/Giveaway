@@ -112,13 +112,13 @@
                     const trigger = document.getElementById('cmd').value.trim().toLowerCase();
 
                     if (msg === trigger) {
-                        // SJEKK FOR EIER (DIN SPESIFIKKE FORESPØRSEL)
+                        // SJEKK FOR EIER (POPS UP PÅ SKJERMEN DIN)
                         if (user === chan.toLowerCase() && !participants.has(user)) {
                             const extra = confirm("Ser du har joinet din egen giveaway, blir det dobbel giveaway om du vinner nå? 🤔🎁");
                             if (extra) {
                                 dbg("DOBBEL GIVEAWAY BEKREFTET! 🎁🔥", true);
                             } else {
-                                dbg("Eier joinet, men ingen ekstra giveaway denne gangen. 😅");
+                                dbg("Eier joinet uten dobbel giveaway.");
                             }
                         }
 
