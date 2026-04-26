@@ -2,148 +2,117 @@
 <html lang="no">
 <head>
     <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Gameninjas RIGGED Giveaways</title>
+    <title>M00RTEN Giveaway Debug</title>
     <script src="https://cdn.jsdelivr.net/npm/comfy.js@1.1.6/dist/comfy.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
-    
     <style>
-        :root { --p: #9146ff; --p-dark: #6441a5; --a: #00f2ff; --bg: #050505; }
-        body { background: var(--bg); color: white; font-family: 'Inter', system-ui, sans-serif; display: flex; align-items: center; justify-content: center; min-height: 100vh; margin: 0; overflow: hidden; }
-        
-        /* Neon Bakgrunnseffekt */
-        .glow { position: fixed; width: 50vw; height: 50vw; background: radial-gradient(circle, rgba(145, 70, 255, 0.15) 0%, transparent 70%); filter: blur(60px); z-index: -1; animation: move Glow 15s infinite alternate ease-in-out; }
-        @keyframes moveGlow { from { transform: translate(-30%, -30%); } to { transform: translate(30%, 30%); } }
-
-        .card { background: rgba(20, 20, 25, 0.85); padding: 45px; border-radius: 28px; border: 1px solid rgba(145, 70, 255, 0.3); backdrop-filter: blur(12px); width: 480px; text-align: center; box-shadow: 0 30px 60px rgba(0,0,0,0.6); position: relative; }
-        h1 { font-size: 2.8rem; background: linear-gradient(to right, var(--p), var(--a)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; margin-bottom: 35px; letter-spacing: -2px; font-weight: 900; }
-        
-        .btn { background: var(--p); color: white; border: none; padding: 18px 36px; border-radius: 14px; font-weight: bold; cursor: pointer; font-size: 1.15rem; transition: 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275); width: 100%; text-transform: uppercase; letter-spacing: 1px; }
-        .btn:hover { transform: translateY(-4px) scale(1.02); box-shadow: 0 15px 30px rgba(145, 70, 255, 0.4); background: var(--p-dark); }
-        .btn:active { transform: translateY(-1px) scale(1); }
-
-        .control-group { text-align: left; margin-bottom: 25px; }
-        label { font-size: 0.8rem; color: #adadb8; text-transform: uppercase; letter-spacing: 2px; font-weight: bold; margin-bottom: 10px; display: block; }
-        input { background: rgba(0,0,0,0.3); border: 1px solid #333; color: white; padding: 15px; width: 100%; border-radius: 10px; font-size: 1.2rem; outline: none; box-sizing: border-box; text-align: center; font-weight: bold; }
-        input:focus { border-color: var(--p); box-shadow: 0 0 10px rgba(145, 70, 255, 0.2); }
-
-        .list-box { background: rgba(0,0,0,0.5); border-radius: 14px; height: 220px; overflow-y: auto; margin: 25px 0; padding: 20px; border: 1px solid #2d2d31; text-align: left; }
-        .user { color: var(--a); padding: 8px 0; border-bottom: 1px solid #1f1f23; font-family: 'Roboto Mono', monospace; animation: fadeIn 0.4s ease; font-weight: bold; }
-        @keyframes fadeIn { from { opacity: 0; transform: translateY(-5px); } to { opacity: 1; transform: translateY(0); } }
-
-        /* Vinner Overlay */
-        #winner-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.96); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 9999; }
-        .winner-title { letter-spacing: 12px; color: var(--p); text-transform: uppercase; font-size: 1.2rem; font-weight: bold; }
-        .winner-name { font-size: 6rem; color: white; text-shadow: 0 0 60px var(--a); margin: 30px 0; font-weight: 900; animation: winnerPop 0.6s cubic-bezier(0.175, 0.885, 0.32, 1.275); }
-        .close-hint { color: #555; cursor: pointer; font-weight: bold; margin-top: 20px; text-decoration: underline; }
-
-        @keyframes winnerPop { from { transform: scale(0.3); opacity: 0; } to { transform: scale(1); opacity: 1; } }
-
-        #logout { font-size: 0.75rem; color: #444; cursor: pointer; margin-top: 20px; background: none; border: none; font-weight: bold; }
-        #logout:hover { color: #ff4d4d; }
+        body { background: #0e0e10; color: white; font-family: sans-serif; text-align: center; padding: 50px; }
+        .box { background: #18181b; padding: 30px; border-radius: 15px; border: 1px solid #9146ff; max-width: 500px; margin: auto; }
+        #debug-log { background: #000; color: #0f0; padding: 10px; height: 150px; overflow-y: auto; text-align: left; font-size: 12px; margin-top: 20px; border: 1px solid #333; }
+        .btn { background: #9146ff; color: white; border: none; padding: 15px; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 10px; }
+        .user-list { background: #26262c; padding: 10px; margin-top: 10px; min-height: 50px; }
+        #winner-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.9); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; }
     </style>
 </head>
 <body>
-    <div class="glow"></div>
 
-    <audio id="winSound" src="https://assets.mixkit.co/active_storage/sfx/1435/1435-preview.mp3" preload="auto"></audio>
-
-    <div id="setup" class="card">
-        <h1>Gameninjas RIGGED Giveaways</h1>
-        <p style="color: #adadb8; margin-bottom: 35px;">Trykk under for å koble til din Twitch-chat.</p>
-        <button class="btn" onclick="login()">KOBLE TIL MED TWITCH</button>
+    <div id="login-screen">
+        <div class="box">
+            <h1>Setup</h1>
+            <button class="btn" onclick="login()">LOGG INN PÅ NYTT</button>
+        </div>
     </div>
 
-    <div id="app" class="card" style="display:none;">
-        <h1 id="channel-name">DASHBOARD</h1>
-        <div class="control-group">
-            <label>Chat Kommando:</label>
-            <input type="text" id="cmd" value="!join">
-        </div>
-        
-        <div style="font-size: 3.5rem; font-weight: 900; color: white;" id="count">0</div>
-        <div style="font-size: 0.9rem; color: var(--a); letter-spacing: 3px; font-weight: bold;">DELTAKERE PÅMELDT</div>
-
-        <div class="list-box" id="user-list"></div>
+    <div id="app" style="display:none;" class="box">
+        <h2 id="chan-name">Kanal</h2>
+        <input type="text" id="cmd" value="!join" style="width:100%; padding:10px; box-sizing:border-box; margin-bottom:10px;">
+        <div style="font-size: 3rem;" id="count">0</div>
+        <div class="user-list" id="users">Ingen påmeldte</div>
         <button class="btn" onclick="draw()">TREKK VINNER</button>
-        <button id="logout" onclick="location.reload()">[ Logg ut / Nullstill ]</button>
+    </div>
+
+    <div class="box" style="margin-top: 20px; border-color: #444;">
+        <p style="font-size: 10px;">HVA SKJER NÅ?</p>
+        <div id="debug-log"></div>
     </div>
 
     <div id="winner-overlay" onclick="this.style.display='none'">
-        <div class="winner-title">GRATULERER</div>
-        <div class="winner-name" id="winner-name">?</div>
-        <div class="close-hint">Trykk hvor som helst for å gå tilbake</div>
+        <h1 style="font-size: 5rem;" id="winner-display">?</h1>
+        <p>Trykk for å lukke</p>
     </div>
 
     <script>
-        // --- DIN NYE CLIENT ID HER ---
-        const CID = "amd8hpskhqo4pqchmhdvis0j7gbes7"; 
-        const URI = "https://m00rten.github.io/Giveaway/"; // Må stemme 100% med store/små bokstaver
-        let participants = new Set();
+        const CID = "amd8hpskhqo4pqchmhdvis0j7gbes7";
+        const URI = window.location.origin + window.location.pathname; 
+        
+        const log = (msg) => {
+            const d = document.getElementById('debug-log');
+            d.innerHTML += `> ${msg}<br>`;
+            d.scrollTop = d.scrollHeight;
+        };
 
         const token = new URLSearchParams(window.location.hash.replace("#", "?")).get("access_token");
 
         if (token) {
-            document.getElementById('setup').style.display = 'none';
+            log("Token mottatt! Henter kanal-info...");
+            document.getElementById('login-screen').style.display = 'none';
             document.getElementById('app').style.display = 'block';
-            
+
             fetch('https://api.twitch.tv/helix/users', {
                 headers: { 'Authorization': `Bearer ${token}`, 'Client-Id': CID }
             })
             .then(r => r.json())
-            .then(d => {
-                if (d.data && d.data[0]) {
-                    const user = d.data[0].login;
-                    document.getElementById('channel-name').innerText = user.toUpperCase();
-                    start(user, token);
-                }
+            .then(data => {
+                const user = data.data[0].login;
+                document.getElementById('chan-name').innerText = user.toUpperCase();
+                log("Logget inn som: " + user);
+                startChat(user, token);
             })
-            .catch(err => alert("Innlogging feilet. Sjekk konsollen (F12)."));
+            .catch(err => log("FEIL ved henting av bruker: " + err));
+        } else {
+            log("Venter på innlogging...");
         }
 
         function login() {
+            log("Sender deg til Twitch...");
+            // Vi bruker nøyaktig URI som er i nettleseren din nå
             window.location.href = `https://id.twitch.tv/oauth2/authorize?client_id=${CID}&redirect_uri=${encodeURIComponent(URI)}&response_type=token&scope=chat:read+chat:edit`;
         }
 
-        function start(chan, tok) {
+        let participants = new Set();
+
+        function startChat(channel, tok) {
+            log("Prøver å koble til chatten på kanal: " + channel);
+            
             ComfyJS.onChat = (user, msg) => {
-                const target = document.getElementById('cmd').value.trim().toLowerCase();
-                if (msg.toLowerCase() === target && !participants.has(user)) {
+                log(`Mottok melding fra ${user}: ${msg}`);
+                const trigger = document.getElementById('cmd').value.trim().toLowerCase();
+                if (msg.toLowerCase() === trigger) {
                     participants.add(user);
                     document.getElementById('count').innerText = participants.size;
-                    const el = document.getElementById('user-list');
-                    // Legger nye øverst
-                    el.innerHTML = `<div class="user">⚡ ${user}</div>` + el.innerHTML;
+                    document.getElementById('users').innerText = Array.from(participants).join(", ");
+                    log(`SUKSESS: ${user} er med!`);
                 }
             };
-            ComfyJS.Init(chan, tok);
+
+            ComfyJS.onConnected = () => {
+                log("KOBLET TIL CHAT-SERVEREN! Siden er klar.");
+            };
+
+            ComfyJS.onError = (err) => log("CHAT FEIL: " + err);
+
+            ComfyJS.Init(channel, tok);
         }
 
         function draw() {
-            if (participants.size === 0) return alert("Ingen har blitt med ennå!");
-            
+            if(participants.size === 0) return alert("Ingen i listen");
             const arr = Array.from(participants);
             const winner = arr[Math.floor(Math.random() * arr.length)];
-            document.getElementById('winner-name').innerText = winner;
+            
+            document.getElementById('winner-display').innerText = winner;
             document.getElementById('winner-overlay').style.display = 'flex';
             
-            // --- KULE EFFEKTER HER ---
-            
-            // 1. Spill lyd
-            document.getElementById('winSound').play().catch(e => console.log("Lyd blokkert av nettleser"));
-            
-            // 2. Eksplosiv konfetti (fra senter)
-            confetti({
-                particleCount: 150,
-                spread: 100,
-                origin: { y: 0.6 }
-            });
-            
-            // 3. Regnende konfetti fra sidene
-            setTimeout(() => {
-                confetti({ particleCount: 50, angle: 60, spread: 55, origin: { x: 0 } });
-                confetti({ particleCount: 50, angle: 120, spread: 55, origin: { x: 1 } });
-            }, 300);
+            confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
         }
     </script>
 </body>
