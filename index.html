@@ -7,19 +7,14 @@
     <style>
         :root { --p: #9146ff; --a: #00f2ff; --bg: #0e0e10; }
         body { background: var(--bg); color: white; font-family: 'Inter', sans-serif; text-align: center; padding: 20px; margin: 0; }
-        
         .card { background: #18181b; padding: 30px; border-radius: 24px; border: 2px solid var(--p); max-width: 450px; margin: auto; box-shadow: 0 15px 35px rgba(0,0,0,0.7); position: relative; }
-        
         h1 { background: linear-gradient(to right, var(--p), var(--a)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-size: 2.5rem; margin-bottom: 10px; font-weight: 900; }
         .stats { font-size: 5rem; font-weight: 900; color: var(--a); margin: 10px 0; text-shadow: 0 0 20px rgba(0, 242, 255, 0.3); cursor: pointer; }
-        
         input { width: 100%; padding: 15px; background: #000; border: 1px solid #333; color: white; border-radius: 12px; font-size: 1.2rem; margin: 15px 0; text-align: center; box-sizing: border-box; }
         .btn { background: var(--p); color: white; border: none; padding: 20px; border-radius: 14px; cursor: pointer; font-weight: bold; width: 100%; font-size: 1.2rem; transition: 0.2s; }
         .btn:hover { transform: scale(1.03); filter: brightness(1.2); }
-        
         .list-trigger { color: var(--p); cursor: pointer; font-size: 0.8rem; letter-spacing: 2px; font-weight: bold; text-decoration: underline; margin-bottom: 15px; display: block; }
         #debug { background: #000; color: #0f0; padding: 10px; height: 80px; overflow-y: auto; text-align: left; font-size: 11px; margin-top: 20px; border-radius: 8px; border: 1px solid #222; font-family: monospace; }
-        
         .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.95); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; padding: 20px; }
         .modal { background: #1c1c21; border: 2px solid var(--p); padding: 30px; border-radius: 20px; width: 90%; max-width: 400px; box-shadow: 0 0 50px rgba(145, 70, 255, 0.2); }
         .modal-btns { display: flex; gap: 10px; margin-top: 25px; }
@@ -71,10 +66,10 @@
 
     <script>
         const CID = "amd8hpskhqo4pqchmhdvis0j7gbes7"; 
-        // Bruker window.location for å alltid matche nåværende URL nøyaktig
         const URI = window.location.origin + window.location.pathname; 
         
-        let participants = new Set();
+        let participantsPool = []; // For selve trekningen (subs legges inn 2x her)
+        let uniqueParticipants = new Set(); // For visning av unike navn
         let channelName = "";
         let socket;
 
@@ -102,17 +97,17 @@
         }
 
         function login() {
-            // Denne URL-en må matche den du har lagt inn i Twitch Dev Console
             window.location.href = `https://id.twitch.tv/oauth2/authorize?client_id=${CID}&redirect_uri=${encodeURIComponent(URI)}&response_type=token&scope=chat:read`;
         }
 
         function connectToChat(chan, tok) {
             socket = new WebSocket('wss://irc-ws.chat.twitch.tv:443');
             socket.onopen = () => {
+                socket.send('CAP REQ :twitch.tv/tags'); // BER OM TAGS (for å sjekke subs)
                 socket.send(`PASS oauth:${tok}`);
                 socket.send(`NICK ${chan}`);
                 socket.send(`JOIN #${chan}`);
-                dbg("KLAR!");
+                dbg("KLAR! (Subs får 2x sjanse)");
             };
             socket.onmessage = (event) => {
                 const data = event.data;
@@ -120,20 +115,37 @@
                     socket.send('PONG :tmi.twitch.tv');
                     return;
                 }
-                const match = data.match(/:(\w+)!\w+@\w+\.tmi\.twitch\.tv PRIVMSG #\w+ :(.+)/);
-                if (match) {
-                    const user = match[1].toLowerCase();
-                    const msg = match[2].trim().toLowerCase();
+
+                // Avansert sjekk for å hente ut sub-status og navn
+                if (data.includes('PRIVMSG')) {
+                    const isSub = data.includes('subscriber=1');
+                    const parts = data.split('PRIVMSG #' + chan + ' :');
+                    if (parts.length < 2) return;
+                    
+                    const msg = parts[1].trim().toLowerCase();
+                    const userMatch = data.match(/display-name=([^;]+)/);
+                    const user = userMatch ? userMatch[1].toLowerCase() : "ukjent";
                     const trigger = document.getElementById('cmd').value.trim().toLowerCase();
 
                     if (msg === trigger) {
-                        if (user === chan.toLowerCase() && !participants.has(user)) {
-                            document.getElementById('owner-modal').style.display = 'flex';
-                        }
-                        if (!participants.has(user)) {
-                            participants.add(user);
-                            document.getElementById('count').innerText = participants.size;
-                            dbg(`${user} ble med!`);
+                        if (!uniqueParticipants.has(user)) {
+                            // Sjekk for eier
+                            if (user === chan.toLowerCase()) {
+                                document.getElementById('owner-modal').style.display = 'flex';
+                            }
+
+                            uniqueParticipants.add(user);
+                            participantsPool.push(user); // Første sjanse
+                            
+                            let logMsg = `${user} ble med!`;
+                            
+                            if (isSub) {
+                                participantsPool.push(user); // Andre sjanse for subs
+                                logMsg = `💎 ${user} ble med (2x SUBS)!`;
+                            }
+
+                            document.getElementById('count').innerText = uniqueParticipants.size;
+                            dbg(logMsg, isSub);
                         }
                     }
                 }
@@ -142,11 +154,11 @@
 
         function showFullList() {
             const listEl = document.getElementById('full-user-list');
-            if (participants.size === 0) {
+            if (uniqueParticipants.size === 0) {
                 listEl.innerText = "Ingen påmeldte ennå...";
             } else {
-                const sorted = Array.from(participants).sort();
-                listEl.innerHTML = sorted.map((u, i) => `${i+1}. ⚡ ${u}`).join("<br>");
+                const sorted = Array.from(uniqueParticipants).sort();
+                listEl.innerHTML = sorted.map((u, i) => `${i+1}. ${u}`).join("<br>");
             }
             document.getElementById('list-modal').style.display = 'flex';
         }
@@ -160,9 +172,11 @@
         }
 
         function draw() {
-            if (participants.size === 0) return alert("Ingen deltakere!");
-            const arr = Array.from(participants);
-            const winner = arr[Math.floor(Math.random() * arr.length)];
+            if (participantsPool.length === 0) return alert("Ingen deltakere!");
+            
+            // Vi trekker fra participantsPool som inneholder subs 2 ganger
+            const winner = participantsPool[Math.floor(Math.random() * participantsPool.length)];
+            
             document.getElementById('winner-name').innerText = winner;
             document.getElementById('winner-overlay').style.display = 'flex';
             confetti({ particleCount: 300, spread: 100, origin: { y: 0.6 } });
