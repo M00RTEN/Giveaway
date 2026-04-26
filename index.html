@@ -11,12 +11,22 @@
         h1 { background: linear-gradient(to right, var(--p), var(--a)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-size: 2.5rem; margin-bottom: 10px; font-weight: 900; }
         .stats { font-size: 5rem; font-weight: 900; color: var(--a); margin: 10px 0; text-shadow: 0 0 20px rgba(0, 242, 255, 0.3); cursor: pointer; }
         input { width: 100%; padding: 15px; background: #000; border: 1px solid #333; color: white; border-radius: 12px; font-size: 1.2rem; margin: 15px 0; text-align: center; box-sizing: border-box; }
+        
+        /* Sub-bryter styling */
+        .sub-toggle { background: #26262c; padding: 10px; border-radius: 12px; margin-bottom: 15px; display: flex; align-items: center; justify-content: center; gap: 10px; border: 1px solid #333; }
+        .switch { position: relative; display: inline-block; width: 40px; height: 20px; }
+        .switch input { opacity: 0; width: 0; height: 0; }
+        .slider { position: absolute; cursor: pointer; inset: 0; background-color: #444; transition: .4s; border-radius: 20px; }
+        .slider:before { position: absolute; content: ""; height: 14px; width: 14px; left: 3px; bottom: 3px; background-color: white; transition: .4s; border-radius: 50%; }
+        input:checked + .slider { background-color: var(--p); }
+        input:checked + .slider:before { transform: translateX(20px); }
+
         .btn { background: var(--p); color: white; border: none; padding: 20px; border-radius: 14px; cursor: pointer; font-weight: bold; width: 100%; font-size: 1.2rem; transition: 0.2s; }
         .btn:hover { transform: scale(1.03); filter: brightness(1.2); }
         .list-trigger { color: var(--p); cursor: pointer; font-size: 0.8rem; letter-spacing: 2px; font-weight: bold; text-decoration: underline; margin-bottom: 15px; display: block; }
         #debug { background: #000; color: #0f0; padding: 10px; height: 80px; overflow-y: auto; text-align: left; font-size: 11px; margin-top: 20px; border-radius: 8px; border: 1px solid #222; font-family: monospace; }
         .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.95); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; padding: 20px; }
-        .modal { background: #1c1c21; border: 2px solid var(--p); padding: 30px; border-radius: 20px; width: 90%; max-width: 400px; box-shadow: 0 0 50px rgba(145, 70, 255, 0.2); }
+        .modal { background: #1c1c21; border: 2px solid var(--p); padding: 30px; border-radius: 20px; width: 90%; max-width: 400px; }
         .modal-btns { display: flex; gap: 10px; margin-top: 25px; }
         .btn-yes { background: #2ecc71; color: white; border: none; padding: 15px; border-radius: 10px; cursor: pointer; flex: 1; font-weight: bold; }
         .btn-no { background: #e74c3c; color: white; border: none; padding: 15px; border-radius: 10px; cursor: pointer; flex: 1; font-weight: bold; }
@@ -33,6 +43,15 @@
     <div id="app" style="display:none;" class="card">
         <h2 id="chan-display" style="color:var(--p); margin:0; letter-spacing: 2px;">KANAL</h2>
         <input type="text" id="cmd" value="!join">
+        
+        <div class="sub-toggle">
+            <span>2x sjanse for Subs?</span>
+            <label class="switch">
+                <input type="checkbox" id="sub-power">
+                <span class="slider"></span>
+            </label>
+        </div>
+
         <div class="stats" id="count" onclick="showFullList()">0</div>
         <span class="list-trigger" onclick="showFullList()">SE FULL DELTAKERLISTE</span>
         <button class="btn" onclick="draw()">TREKK EN VINNER!</button>
@@ -50,7 +69,7 @@
     <div id="owner-modal" class="overlay">
         <div class="modal">
             <h2 style="color: var(--a);">HEHE! 😎</h2>
-            <p style="font-size: 1.1rem;">Dobbel giveaway om du vinner, siden du joiner giveawayen selv? hehe</p>
+            <p>Dobbel giveaway om du vinner, siden du joiner giveawayen selv? hehe</p>
             <div class="modal-btns">
                 <button class="btn-yes" onclick="ownerAnswer(true)">JA!</button>
                 <button class="btn-no" onclick="ownerAnswer(false)">NEI</button>
@@ -68,14 +87,14 @@
         const CID = "amd8hpskhqo4pqchmhdvis0j7gbes7"; 
         const URI = window.location.origin + window.location.pathname; 
         
-        let participantsPool = []; // For selve trekningen (subs legges inn 2x her)
-        let uniqueParticipants = new Set(); // For visning av unike navn
+        let participantsPool = []; 
+        let uniqueParticipants = new Set(); 
         let channelName = "";
         let socket;
 
-        const dbg = (msg, isExtra = false) => {
+        const dbg = (msg, isSpecial = false) => {
             const d = document.getElementById('debug');
-            const color = isExtra ? "#00f2ff" : "#0f0";
+            const color = isSpecial ? "#00f2ff" : "#0f0";
             d.innerHTML += `> <span style="color:${color}">${msg}</span><br>`;
             d.scrollTop = d.scrollHeight;
         };
@@ -96,27 +115,21 @@
             });
         }
 
-        function login() {
-            window.location.href = `https://id.twitch.tv/oauth2/authorize?client_id=${CID}&redirect_uri=${encodeURIComponent(URI)}&response_type=token&scope=chat:read`;
-        }
+        function login() { window.location.href = `https://id.twitch.tv/oauth2/authorize?client_id=${CID}&redirect_uri=${encodeURIComponent(URI)}&response_type=token&scope=chat:read`; }
 
         function connectToChat(chan, tok) {
             socket = new WebSocket('wss://irc-ws.chat.twitch.tv:443');
             socket.onopen = () => {
-                socket.send('CAP REQ :twitch.tv/tags'); // BER OM TAGS (for å sjekke subs)
+                socket.send('CAP REQ :twitch.tv/tags');
                 socket.send(`PASS oauth:${tok}`);
                 socket.send(`NICK ${chan}`);
                 socket.send(`JOIN #${chan}`);
-                dbg("KLAR! (Subs får 2x sjanse)");
+                dbg("KLAR!");
             };
             socket.onmessage = (event) => {
                 const data = event.data;
-                if (data.includes('PING :tmi.twitch.tv')) {
-                    socket.send('PONG :tmi.twitch.tv');
-                    return;
-                }
+                if (data.includes('PING :tmi.twitch.tv')) { socket.send('PONG :tmi.twitch.tv'); return; }
 
-                // Avansert sjekk for å hente ut sub-status og navn
                 if (data.includes('PRIVMSG')) {
                     const isSub = data.includes('subscriber=1');
                     const parts = data.split('PRIVMSG #' + chan + ' :');
@@ -129,23 +142,21 @@
 
                     if (msg === trigger) {
                         if (!uniqueParticipants.has(user)) {
-                            // Sjekk for eier
-                            if (user === chan.toLowerCase()) {
-                                document.getElementById('owner-modal').style.display = 'flex';
-                            }
+                            if (user === chan.toLowerCase()) document.getElementById('owner-modal').style.display = 'flex';
 
                             uniqueParticipants.add(user);
-                            participantsPool.push(user); // Første sjanse
+                            participantsPool.push(user); // Vanlig sjanse
                             
-                            let logMsg = `${user} ble med!`;
+                            const subPowerActive = document.getElementById('sub-power').checked;
                             
-                            if (isSub) {
-                                participantsPool.push(user); // Andre sjanse for subs
-                                logMsg = `💎 ${user} ble med (2x SUBS)!`;
+                            if (isSub && subPowerActive) {
+                                participantsPool.push(user); // Ekstra sjanse
+                                dbg(`💎 ${user} (2x SUB sjanse!)`, true);
+                            } else {
+                                dbg(`${user} ble med!`);
                             }
 
                             document.getElementById('count').innerText = uniqueParticipants.size;
-                            dbg(logMsg, isSub);
                         }
                     }
                 }
@@ -154,29 +165,19 @@
 
         function showFullList() {
             const listEl = document.getElementById('full-user-list');
-            if (uniqueParticipants.size === 0) {
-                listEl.innerText = "Ingen påmeldte ennå...";
-            } else {
-                const sorted = Array.from(uniqueParticipants).sort();
-                listEl.innerHTML = sorted.map((u, i) => `${i+1}. ${u}`).join("<br>");
-            }
+            const sorted = Array.from(uniqueParticipants).sort();
+            listEl.innerHTML = sorted.length ? sorted.map((u, i) => `${i+1}. ${u}`).join("<br>") : "Ingen påmeldte...";
             document.getElementById('list-modal').style.display = 'flex';
         }
 
         function ownerAnswer(isYes) {
             document.getElementById('owner-modal').style.display = 'none';
-            if (isYes) {
-                dbg("DOBBEL GIVEAWAY BEKREFTET! 🎁🔥", true);
-                confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
-            }
+            if (isYes) dbg("DOBBEL GIVEAWAY BEKREFTET! 🎁🔥", true);
         }
 
         function draw() {
             if (participantsPool.length === 0) return alert("Ingen deltakere!");
-            
-            // Vi trekker fra participantsPool som inneholder subs 2 ganger
             const winner = participantsPool[Math.floor(Math.random() * participantsPool.length)];
-            
             document.getElementById('winner-name').innerText = winner;
             document.getElementById('winner-overlay').style.display = 'flex';
             confetti({ particleCount: 300, spread: 100, origin: { y: 0.6 } });
