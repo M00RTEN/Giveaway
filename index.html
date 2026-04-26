@@ -2,117 +2,128 @@
 <html lang="no">
 <head>
     <meta charset="UTF-8">
-    <title>M00RTEN Giveaway Debug</title>
+    <title>M00RTEN Giveaway - Owner Alert</title>
     <script src="https://cdn.jsdelivr.net/npm/comfy.js@1.1.6/dist/comfy.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <style>
-        body { background: #0e0e10; color: white; font-family: sans-serif; text-align: center; padding: 50px; }
-        .box { background: #18181b; padding: 30px; border-radius: 15px; border: 1px solid #9146ff; max-width: 500px; margin: auto; }
-        #debug-log { background: #000; color: #0f0; padding: 10px; height: 150px; overflow-y: auto; text-align: left; font-size: 12px; margin-top: 20px; border: 1px solid #333; }
-        .btn { background: #9146ff; color: white; border: none; padding: 15px; border-radius: 8px; cursor: pointer; font-weight: bold; width: 100%; margin-top: 10px; }
-        .user-list { background: #26262c; padding: 10px; margin-top: 10px; min-height: 50px; }
-        #winner-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.9); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; }
+        :root { --p: #9146ff; --a: #00f2ff; --bg: #0e0e10; }
+        body { background: var(--bg); color: white; font-family: 'Inter', sans-serif; text-align: center; padding: 20px; }
+        .card { background: #18181b; padding: 30px; border-radius: 20px; border: 1px solid var(--p); max-width: 500px; margin: auto; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
+        h1 { background: linear-gradient(to right, var(--p), var(--a)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-size: 2.5rem; margin-bottom: 10px; }
+        input { width: 100%; padding: 15px; background: #000; border: 1px solid #333; color: white; border-radius: 10px; font-size: 1.2rem; margin: 15px 0; box-sizing: border-box; text-align: center; }
+        .stats { font-size: 4rem; font-weight: 900; color: var(--a); margin: 10px 0; }
+        .user-list { background: rgba(0,0,0,0.3); padding: 15px; border-radius: 10px; min-height: 50px; text-align: left; max-height: 150px; overflow-y: auto; font-family: monospace; border: 1px solid #222; }
+        .btn { background: var(--p); color: white; border: none; padding: 20px; border-radius: 12px; cursor: pointer; font-weight: bold; width: 100%; font-size: 1.2rem; margin-top: 20px; transition: 0.2s; }
+        .btn:hover { transform: scale(1.02); filter: brightness(1.2); }
+        #log { background: #000; color: #0f0; padding: 10px; height: 100px; overflow-y: auto; text-align: left; font-size: 11px; margin-top: 20px; border-radius: 5px; border: 1px solid #222; }
+        #winner-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.95); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; }
     </style>
 </head>
 <body>
 
-    <div id="login-screen">
-        <div class="box">
-            <h1>Setup</h1>
-            <button class="btn" onclick="login()">LOGG INN PÅ NYTT</button>
-        </div>
+    <div id="login-screen" class="card" style="margin-top: 100px;">
+        <h1>GIVEAWAY</h1>
+        <button class="btn" onclick="login()">LOGG INN MED TWITCH</button>
     </div>
 
-    <div id="app" style="display:none;" class="box">
-        <h2 id="chan-name">Kanal</h2>
-        <input type="text" id="cmd" value="!join" style="width:100%; padding:10px; box-sizing:border-box; margin-bottom:10px;">
-        <div style="font-size: 3rem;" id="count">0</div>
-        <div class="user-list" id="users">Ingen påmeldte</div>
-        <button class="btn" onclick="draw()">TREKK VINNER</button>
-    </div>
-
-    <div class="box" style="margin-top: 20px; border-color: #444;">
-        <p style="font-size: 10px;">HVA SKJER NÅ?</p>
-        <div id="debug-log"></div>
+    <div id="app" style="display:none;" class="card">
+        <h2 id="chan-display" style="margin:0; color: var(--p);">KANAL</h2>
+        <input type="text" id="cmd" value="!join">
+        <div class="stats" id="count">0</div>
+        <div style="font-size: 0.8rem; color: gray; letter-spacing: 2px;">DELTAKERE</div>
+        <div class="user-list" id="users">Ingen påmeldte...</div>
+        <button class="btn" onclick="draw()">TREKK VINNER!</button>
+        <div id="log"></div>
     </div>
 
     <div id="winner-overlay" onclick="this.style.display='none'">
-        <h1 style="font-size: 5rem;" id="winner-display">?</h1>
-        <p>Trykk for å lukke</p>
+        <h2 style="color: var(--p); letter-spacing: 5px;">VINNEREN ER:</h2>
+        <h1 style="font-size: 6rem; color: var(--a); text-shadow: 0 0 30px var(--a);" id="winner-name">?</h1>
+        <p style="color: #444;">Trykk for å lukke</p>
     </div>
 
     <script>
         const CID = "amd8hpskhqo4pqchmhdvis0j7gbes7";
-        const URI = window.location.origin + window.location.pathname; 
-        
-        const log = (msg) => {
-            const d = document.getElementById('debug-log');
-            d.innerHTML += `> ${msg}<br>`;
+        const URI = window.location.origin + window.location.pathname;
+        let participants = new Set();
+        let channelOwner = "";
+
+        const log = (msg, color = "#0f0") => {
+            const d = document.getElementById('log');
+            d.innerHTML += `> <span style="color:${color}">${msg}</span><br>`;
             d.scrollTop = d.scrollHeight;
         };
 
         const token = new URLSearchParams(window.location.hash.replace("#", "?")).get("access_token");
 
         if (token) {
-            log("Token mottatt! Henter kanal-info...");
             document.getElementById('login-screen').style.display = 'none';
             document.getElementById('app').style.display = 'block';
-
+            
             fetch('https://api.twitch.tv/helix/users', {
                 headers: { 'Authorization': `Bearer ${token}`, 'Client-Id': CID }
             })
             .then(r => r.json())
             .then(data => {
-                const user = data.data[0].login;
-                document.getElementById('chan-name').innerText = user.toUpperCase();
-                log("Logget inn som: " + user);
-                startChat(user, token);
-            })
-            .catch(err => log("FEIL ved henting av bruker: " + err));
-        } else {
-            log("Venter på innlogging...");
+                channelOwner = data.data[0].login;
+                document.getElementById('chan-display').innerText = channelOwner.toUpperCase();
+                startChat(channelOwner, token);
+            });
         }
 
         function login() {
-            log("Sender deg til Twitch...");
-            // Vi bruker nøyaktig URI som er i nettleseren din nå
-            window.location.href = `https://id.twitch.tv/oauth2/authorize?client_id=${CID}&redirect_uri=${encodeURIComponent(URI)}&response_type=token&scope=chat:read+chat:edit`;
+            window.location.href = `https://id.twitch.tv/oauth2/authorize?client_id=${CID}&redirect_uri=${encodeURIComponent(URI)}&response_type=token&scope=chat:read`;
         }
 
-        let participants = new Set();
-
         function startChat(channel, tok) {
-            log("Prøver å koble til chatten på kanal: " + channel);
-            
             ComfyJS.onChat = (user, msg) => {
-                log(`Mottok melding fra ${user}: ${msg}`);
                 const trigger = document.getElementById('cmd').value.trim().toLowerCase();
+                
                 if (msg.toLowerCase() === trigger) {
-                    participants.add(user);
-                    document.getElementById('count').innerText = participants.size;
-                    document.getElementById('users').innerText = Array.from(participants).join(", ");
-                    log(`SUKSESS: ${user} er med!`);
+                    // SJEKK OM DET ER EIEREN SOM JOINER
+                    if (user.toLowerCase() === channelOwner.toLowerCase() && !participants.has(user)) {
+                        const answer = confirm("Ser du har joinet din egen giveaway, blir det ekstra giveaway om du vinner? 🤔🎁");
+                        if (answer) {
+                            log("EKSTRA GIVEAWAY BEKREFTET! 🎁🔥", "#00f2ff");
+                        } else {
+                            log("Ingen ekstra giveaway denne gangen. 😅");
+                        }
+                    }
+
+                    if (!participants.has(user)) {
+                        participants.add(user);
+                        updateUI();
+                        log(`LAGT TIL: ${user}`);
+                    }
                 }
             };
-
-            ComfyJS.onConnected = () => {
-                log("KOBLET TIL CHAT-SERVEREN! Siden er klar.");
-            };
-
-            ComfyJS.onError = (err) => log("CHAT FEIL: " + err);
-
+            
+            ComfyJS.onConnected = () => log("TILKOBLET! Alt fungerer.");
             ComfyJS.Init(channel, tok);
         }
 
+        function updateUI() {
+            document.getElementById('count').innerText = participants.size;
+            document.getElementById('users').innerHTML = Array.from(participants).map(u => `<div>⚡ ${u}</div>`).join("");
+        }
+
         function draw() {
-            if(participants.size === 0) return alert("Ingen i listen");
+            if(participants.size === 0) return alert("Ingen deltakere!");
             const arr = Array.from(participants);
             const winner = arr[Math.floor(Math.random() * arr.length)];
             
-            document.getElementById('winner-display').innerText = winner;
+            document.getElementById('winner-name').innerText = winner;
             document.getElementById('winner-overlay').style.display = 'flex';
             
-            confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
+            // Konfetti-regn
+            var end = Date.now() + (4 * 1000);
+            var colors = ['#9146ff', '#00f2ff', '#ffffff'];
+
+            (function frame() {
+              confetti({ particleCount: 3, angle: 60, spread: 55, origin: { x: 0 }, colors: colors });
+              confetti({ particleCount: 3, angle: 120, spread: 55, origin: { x: 1 }, colors: colors });
+              if (Date.now() < end) { requestAnimationFrame(frame); }
+            }());
         }
     </script>
 </body>
