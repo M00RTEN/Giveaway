@@ -1,0 +1,189 @@
+<!DOCTYPE html>
+<html lang="no">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Twitch Giveaway Pro</title>
+    <script src="https://cdn.jsdelivr.net/npm/comfy.js@1.1.6/dist/comfy.min.js"></script>
+    <style>
+        :root {
+            --primary: #9146ff;
+            --accent: #00f2ff;
+            --bg: #0e0e10;
+            --card-bg: #18181b;
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--bg);
+            color: white;
+            margin: 0;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            overflow: hidden;
+        }
+
+        /* Login / Setup Skjerm */
+        #setup-screen {
+            position: fixed;
+            inset: 0;
+            background: var(--bg);
+            z-index: 100;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            transition: opacity 0.5s ease;
+        }
+
+        .login-card {
+            background: var(--card-bg);
+            padding: 3rem;
+            border-radius: 20px;
+            border: 1px solid var(--primary);
+            text-align: center;
+            box-shadow: 0 0 30px rgba(145, 70, 255, 0.3);
+        }
+
+        input {
+            background: #000;
+            border: 2px solid #333;
+            color: white;
+            padding: 12px 20px;
+            border-radius: 10px;
+            font-size: 1.1rem;
+            margin: 1rem 0;
+            width: 250px;
+            outline: none;
+        }
+
+        input:focus { border-color: var(--primary); }
+
+        /* Hovedgrensesnitt (skjult før login) */
+        #main-app {
+            display: none;
+            width: 100%;
+            max-width: 800px;
+            text-align: center;
+            z-index: 10;
+        }
+
+        /* --- Stil-elementer fra forrige svar --- */
+        .container {
+            background: var(--card-bg);
+            padding: 30px;
+            border-radius: 20px;
+            border: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .btn {
+            background: var(--primary);
+            color: white;
+            border: none;
+            padding: 12px 30px;
+            border-radius: 10px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: 0.2s;
+        }
+
+        .btn:hover { filter: brightness(1.2); }
+
+        #winner-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(0,0,0,0.9);
+            display: none;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            z-index: 200;
+        }
+
+        .confetti { position: absolute; width: 10px; height: 10px; background: var(--accent); }
+    </style>
+</head>
+<body>
+
+    <div id="setup-screen">
+        <div class="login-card">
+            <h2 style="margin-top:0">Twitch Giveaway Connect</h2>
+            <p style="color: #adadb8">Skriv inn kanalnavnet ditt for å starte</p>
+            <input type="text" id="channel-input" placeholder="Brukernavn på Twitch...">
+            <br>
+            <button class="btn" onclick="connectToTwitch()">KOBLE TIL</button>
+        </div>
+    </div>
+
+    <div id="main-app">
+        <div class="container">
+            <h1 id="live-header">Kanal: --</h1>
+            <p>Kommando: <span style="color:var(--accent); font-weight:bold">!join</span></p>
+            
+            <div style="font-size: 4rem; font-weight: 900; margin: 20px 0;">
+                <span id="count">0</span>
+            </div>
+            <p style="text-transform: uppercase; letter-spacing: 2px">Deltakere påmeldt</p>
+            
+            <button class="btn" style="font-size: 1.5rem; margin-top: 20px;" onclick="startDraw()">TREKK EN VINNER</button>
+        </div>
+    </div>
+
+    <div id="winner-overlay" onclick="this.style.display='none'">
+        <h2 style="color: var(--primary); letter-spacing: 5px">VINNEREN ER:</h2>
+        <h1 id="winner-name" style="font-size: 5rem; text-shadow: 0 0 30px var(--accent);">---</h1>
+        <p>Trykk hvor som helst for å lukke</p>
+    </div>
+
+    <script>
+        let participants = new Set();
+        let currentChannel = "";
+
+        function connectToTwitch() {
+            const input = document.getElementById('channel-input').value.trim();
+            if (!input) return alert("Vennligst skriv et kanalnavn");
+
+            currentChannel = input;
+            
+            // Konfigurer ComfyJS
+            ComfyJS.onChat = (user, message, flags, self, extra) => {
+                if (message.toLowerCase() === "!join") {
+                    if (!participants.has(user)) {
+                        participants.add(user);
+                        document.getElementById('count').innerText = participants.size;
+                        playJoinSound(); // Valgfritt: legg til lyd her
+                    }
+                }
+            };
+
+            ComfyJS.onConnected = () => {
+                document.getElementById('setup-screen').style.opacity = '0';
+                setTimeout(() => {
+                    document.getElementById('setup-screen').style.display = 'none';
+                    document.getElementById('main-app').style.display = 'block';
+                    document.getElementById('live-header').innerText = "LIVE: " + currentChannel;
+                }, 500);
+            };
+
+            ComfyJS.Init(currentChannel);
+        }
+
+        function startDraw() {
+            if (participants.size === 0) return alert("Ingen har blitt med ennå!");
+
+            const list = Array.from(participants);
+            const winner = list[Math.floor(Math.random() * list.length)];
+
+            document.getElementById('winner-name').innerText = winner;
+            document.getElementById('winner-overlay').style.display = 'flex';
+        }
+
+        function playJoinSound() {
+            // Her kan du legge inn en kort "pling"-lyd hvis du vil
+            console.log("Ny deltaker!");
+        }
+    </script>
+</body>
+</html>
