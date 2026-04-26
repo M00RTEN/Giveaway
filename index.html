@@ -8,23 +8,18 @@
         :root { --p: #9146ff; --a: #00f2ff; --bg: #0e0e10; }
         body { background: var(--bg); color: white; font-family: 'Inter', sans-serif; text-align: center; padding: 20px; }
         
-        /* Hovedkortet */
         .card { background: #18181b; padding: 30px; border-radius: 24px; border: 2px solid var(--p); max-width: 450px; margin: auto; box-shadow: 0 15px 35px rgba(0,0,0,0.7); }
         
-        /* Overskrifter og tekst */
         h1 { background: linear-gradient(to right, var(--p), var(--a)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-size: 2.5rem; margin-bottom: 10px; font-weight: 900; }
         .stats { font-size: 5rem; font-weight: 900; color: var(--a); margin: 10px 0; text-shadow: 0 0 20px rgba(0, 242, 255, 0.3); }
         
-        /* Input og knapper */
         input { width: 100%; padding: 15px; background: #000; border: 1px solid #333; color: white; border-radius: 12px; font-size: 1.2rem; margin: 15px 0; text-align: center; box-sizing: border-box; }
         .btn { background: var(--p); color: white; border: none; padding: 20px; border-radius: 14px; cursor: pointer; font-weight: bold; width: 100%; font-size: 1.2rem; transition: 0.2s; }
         .btn:hover { transform: scale(1.03); filter: brightness(1.2); }
         
-        /* Deltakerliste og Debug */
         .user-list { background: rgba(0,0,0,0.3); padding: 15px; border-radius: 10px; min-height: 40px; color: #888; font-family: monospace; margin-bottom: 15px; }
         #debug { background: #000; color: #0f0; padding: 10px; height: 100px; overflow-y: auto; text-align: left; font-size: 11px; margin-top: 20px; border-radius: 8px; border: 1px solid #222; font-family: monospace; opacity: 0.8; }
         
-        /* Vinner-skjerm som popper opp */
         #winner-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.95); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; }
         .winner-name { font-size: 6rem; color: var(--a); text-shadow: 0 0 50px var(--a); font-weight: 900; margin: 20px 0; }
     </style>
@@ -57,14 +52,12 @@
     </div>
 
     <script>
-        // Konfigurasjon
-        const CID = "amd8hpskhqo4pqchmhdvis0j7gbes7"; // Din Client ID
-        const URI = "https://m00rten.github.io/Giveaway/"; // Din Redirect URL
+        const CID = "amd8hpskhqo4pqchmhdvis0j7gbes7"; 
+        const URI = "https://m00rten.github.io/Giveaway/"; 
         let participants = new Set();
         let channelName = "";
         let socket;
 
-        // Funksjon for å skrive til loggen på skjermen
         const dbg = (msg, isExtra = false) => {
             const d = document.getElementById('debug');
             const color = isExtra ? "#00f2ff" : "#0f0";
@@ -72,14 +65,12 @@
             d.scrollTop = d.scrollHeight;
         };
 
-        // Sjekk om vi har fått token fra Twitch etter innlogging
         const token = new URLSearchParams(window.location.hash.replace("#", "?")).get("access_token");
 
         if (token) {
             document.getElementById('login-screen').style.display = 'none';
             document.getElementById('app').style.display = 'block';
             
-            // Hent brukernavnet ditt fra Twitch API
             fetch('https://api.twitch.tv/helix/users', {
                 headers: { 'Authorization': `Bearer ${token}`, 'Client-Id': CID }
             })
@@ -91,12 +82,10 @@
             });
         }
 
-        // Send brukeren til Twitch for godkjenning
         function login() {
             window.location.href = `https://id.twitch.tv/oauth2/authorize?client_id=${CID}&redirect_uri=${encodeURIComponent(URI)}&response_type=token&scope=chat:read`;
         }
 
-        // Koble direkte til Twitch Chat via WebSockets (IRC)
         function connectToChat(chan, tok) {
             dbg("Kobler til Twitch-serveren...");
             socket = new WebSocket('wss://irc-ws.chat.twitch.tv:443');
@@ -111,29 +100,28 @@
             socket.onmessage = (event) => {
                 const data = event.data;
                 
-                // Hold tilkoblingen i live
                 if (data.includes('PING :tmi.twitch.tv')) {
                     socket.send('PONG :tmi.twitch.tv');
                     return;
                 }
 
-                // Finn ut hvem som skrev og hva de skrev ved hjelp av Regex
                 const match = data.match(/:(\w+)!\w+@\w+\.tmi\.twitch\.tv PRIVMSG #\w+ :(.+)/);
                 if (match) {
                     const user = match[1].toLowerCase();
                     const msg = match[2].trim().toLowerCase();
                     const trigger = document.getElementById('cmd').value.trim().toLowerCase();
 
-                    // Hvis meldingen matcher kommandoen
                     if (msg === trigger) {
-                        
-                        // Sjekk om det er eieren (M00RTEN) som joiner sin egen giveaway
+                        // SJEKK FOR EIER (DIN SPESIFIKKE FORESPØRSEL)
                         if (user === chan.toLowerCase() && !participants.has(user)) {
-                            const extra = confirm("Ser du har joinet din egen giveaway, blir det ekstra giveaway om du vinner? 🤔🎁");
-                            if (extra) dbg("EKSTRA GIVEAWAY BEKREFTET! 🎁🔥", true);
+                            const extra = confirm("Ser du har joinet din egen giveaway, blir det dobbel giveaway om du vinner nå? 🤔🎁");
+                            if (extra) {
+                                dbg("DOBBEL GIVEAWAY BEKREFTET! 🎁🔥", true);
+                            } else {
+                                dbg("Eier joinet, men ingen ekstra giveaway denne gangen. 😅");
+                            }
                         }
 
-                        // Legg til deltaker hvis de ikke er med fra før
                         if (!participants.has(user)) {
                             participants.add(user);
                             document.getElementById('count').innerText = participants.size;
@@ -147,18 +135,15 @@
             socket.onclose = () => dbg("Tilkobling mistet. Last inn siden på nytt.");
         }
 
-        // Trekk en vinner og fyr av konfetti!
         function draw() {
             if (participants.size === 0) return alert("Ingen deltakere har meldt seg på ennå!");
             
             const arr = Array.from(participants);
             const winner = arr[Math.floor(Math.random() * arr.length)];
             
-            // Vis vinner-overlay
             document.getElementById('winner-name').innerText = winner;
             document.getElementById('winner-overlay').style.display = 'flex';
             
-            // Konfetti-effekt (Eksplosjon)
             confetti({
                 particleCount: 200,
                 spread: 90,
@@ -166,7 +151,6 @@
                 colors: ['#9146ff', '#00f2ff', '#ffffff']
             });
 
-            // Litt ekstra konfetti etter ett sekund
             setTimeout(() => {
                 confetti({ particleCount: 100, angle: 60, spread: 55, origin: { x: 0 } });
                 confetti({ particleCount: 100, angle: 120, spread: 55, origin: { x: 1 } });
