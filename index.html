@@ -11,50 +11,62 @@
         .card { background: #18181b; padding: 30px; border-radius: 24px; border: 2px solid var(--p); max-width: 450px; margin: auto; box-shadow: 0 15px 35px rgba(0,0,0,0.7); position: relative; }
         
         h1 { background: linear-gradient(to right, var(--p), var(--a)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-size: 2.5rem; margin-bottom: 10px; font-weight: 900; }
-        .stats { font-size: 5rem; font-weight: 900; color: var(--a); margin: 10px 0; text-shadow: 0 0 20px rgba(0, 242, 255, 0.3); }
+        .stats { font-size: 5rem; font-weight: 900; color: var(--a); margin: 10px 0; text-shadow: 0 0 20px rgba(0, 242, 255, 0.3); cursor: pointer; }
         
         input { width: 100%; padding: 15px; background: #000; border: 1px solid #333; color: white; border-radius: 12px; font-size: 1.2rem; margin: 15px 0; text-align: center; box-sizing: border-box; }
         .btn { background: var(--p); color: white; border: none; padding: 20px; border-radius: 14px; cursor: pointer; font-weight: bold; width: 100%; font-size: 1.2rem; transition: 0.2s; }
         .btn:hover { transform: scale(1.03); filter: brightness(1.2); }
         
-        .user-list { background: rgba(0,0,0,0.3); padding: 15px; border-radius: 10px; min-height: 40px; color: #888; font-family: monospace; margin-bottom: 15px; }
-        #debug { background: #000; color: #0f0; padding: 10px; height: 100px; overflow-y: auto; text-align: left; font-size: 11px; margin-top: 20px; border-radius: 8px; border: 1px solid #222; font-family: monospace; opacity: 0.8; }
-        
-        /* Overlay-stiler for Vinner og Eier-spørsmål */
-        .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.95); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; animation: fadeIn 0.3s; }
-        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        /* Klikkbar tekst for liste */
+        .list-trigger { color: var(--p); cursor: pointer; font-size: 0.8rem; letter-spacing: 2px; font-weight: bold; text-decoration: underline; margin-bottom: 15px; display: block; }
+        .list-trigger:hover { color: var(--a); }
 
-        .modal { background: #1c1c21; border: 2px solid var(--a); padding: 40px; border-radius: 20px; max-width: 400px; box-shadow: 0 0 50px rgba(0, 242, 255, 0.2); }
-        .modal h2 { margin-top: 0; color: var(--a); }
+        #debug { background: #000; color: #0f0; padding: 10px; height: 80px; overflow-y: auto; text-align: left; font-size: 11px; margin-top: 20px; border-radius: 8px; border: 1px solid #222; font-family: monospace; opacity: 0.8; }
+        
+        /* Overlay-stiler */
+        .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.95); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; padding: 20px; }
+        
+        .modal { background: #1c1c21; border: 2px solid var(--p); padding: 30px; border-radius: 20px; width: 90%; max-width: 400px; box-shadow: 0 0 50px rgba(145, 70, 255, 0.2); }
         .modal-btns { display: flex; gap: 10px; margin-top: 25px; }
         .btn-yes { background: #2ecc71; color: white; border: none; padding: 15px; border-radius: 10px; cursor: pointer; flex: 1; font-weight: bold; }
         .btn-no { background: #e74c3c; color: white; border: none; padding: 15px; border-radius: 10px; cursor: pointer; flex: 1; font-weight: bold; }
+
+        /* Full liste scroll-område */
+        #full-user-list { max-height: 300px; overflow-y: auto; text-align: left; background: rgba(0,0,0,0.5); padding: 15px; border-radius: 10px; font-family: monospace; line-height: 1.6; border: 1px solid #333; }
     </style>
 </head>
 <body>
 
     <div id="login-screen" style="margin-top:100px;">
-        <h1 style="-webkit-text-fill-color: white;">GameNinja RIGGED Giveaways</h1>
+        <h1>GameNinja RIGGED Giveaways</h1>
         <button class="btn" style="width:auto; padding: 20px 40px;" onclick="login()">LOGG INN MED TWITCH</button>
     </div>
 
     <div id="app" style="display:none;" class="card">
         <h2 id="chan-display" style="color:var(--p); margin:0; letter-spacing: 2px;">KANAL</h2>
         <input type="text" id="cmd" value="!join">
-        <div class="stats" id="count">0</div>
-        <div style="font-size: 0.8rem; color: #555; letter-spacing: 3px; font-weight: bold; margin-bottom: 10px;">DELTAKERE</div>
-        <div class="user-list" id="users">Venter...</div>
+        <div class="stats" id="count" onclick="showFullList()">0</div>
+        <span class="list-trigger" onclick="showFullList()">SE FULL DELTAKERLISTE</span>
+        
         <button class="btn" onclick="draw()">TREKK EN VINNER!</button>
         <div id="debug"></div>
     </div>
 
+    <div id="list-modal" class="overlay" onclick="this.style.display='none'">
+        <div class="modal" onclick="event.stopPropagation()">
+            <h2 style="color: var(--a);">DELTAKERE</h2>
+            <div id="full-user-list">Ingen påmeldte ennå...</div>
+            <button class="btn" style="margin-top:20px; padding:10px;" onclick="document.getElementById('list-modal').style.display='none'">LUKK</button>
+        </div>
+    </div>
+
     <div id="owner-modal" class="overlay">
         <div class="modal">
-            <h2>HEHE! 😎</h2>
-            <p id="owner-msg" style="font-size: 1.2rem; line-height: 1.5;">Dobbel giveaway om du vinner, siden du joiner giveawayen selv? hehe</p>
+            <h2 style="color: var(--a);">HEHE! 😎</h2>
+            <p style="font-size: 1.1rem;">Dobbel giveaway om du vinner, siden du joiner giveawayen selv? hehe</p>
             <div class="modal-btns">
-                <button class="btn-yes" onclick="ownerAnswer(true)">JA, SELVFØLGELIG!</button>
-                <button class="btn-no" onclick="ownerAnswer(false)">NEI...</button>
+                <button class="btn-yes" onclick="ownerAnswer(true)">JA!</button>
+                <button class="btn-no" onclick="ownerAnswer(false)">NEI</button>
             </div>
         </div>
     </div>
@@ -62,7 +74,7 @@
     <div id="winner-overlay" class="overlay" onclick="this.style.display='none'">
         <div style="letter-spacing: 10px; color: var(--p); font-weight: bold;">VINNEREN ER</div>
         <h1 style="font-size: 6rem; color: var(--a); text-shadow: 0 0 50px var(--a); margin: 20px 0;" id="winner-name">?</h1>
-        <p style="color: #444;">Trykk hvor som helst for å lukke</p>
+        <p style="color: #444;">Trykk for å lukke</p>
     </div>
 
     <script>
@@ -96,13 +108,11 @@
         }
 
         function login() {
-            window.location.href = `https://id.twitch.tv/oauth2/authorize?client_id=${CID}&redirect_uri=${encodeURIComponent(URI)}&response_type=token&scope=chat:read`;
+            window.location.href = `https://id.twitch.tv/authorize?client_id=${CID}&redirect_uri=${encodeURIComponent(URI)}&response_type=token&scope=chat:read`;
         }
 
         function connectToChat(chan, tok) {
-            dbg("Kobler til Twitch-serveren...");
             socket = new WebSocket('wss://irc-ws.chat.twitch.tv:443');
-
             socket.onopen = () => {
                 socket.send(`PASS oauth:${tok}`);
                 socket.send(`NICK ${chan}`);
@@ -116,7 +126,6 @@
                     socket.send('PONG :tmi.twitch.tv');
                     return;
                 }
-
                 const match = data.match(/:(\w+)!\w+@\w+\.tmi\.twitch\.tv PRIVMSG #\w+ :(.+)/);
                 if (match) {
                     const user = match[1].toLowerCase();
@@ -124,15 +133,12 @@
                     const trigger = document.getElementById('cmd').value.trim().toLowerCase();
 
                     if (msg === trigger) {
-                        // SJEKK FOR EIER - VIS MODAL
                         if (user === chan.toLowerCase() && !participants.has(user)) {
                             document.getElementById('owner-modal').style.display = 'flex';
                         }
-
                         if (!participants.has(user)) {
                             participants.add(user);
                             document.getElementById('count').innerText = participants.size;
-                            document.getElementById('users').innerText = Array.from(participants).join(", ");
                             dbg(`${user} ble med!`);
                         }
                     }
@@ -140,13 +146,23 @@
             };
         }
 
+        function showFullList() {
+            const listEl = document.getElementById('full-user-list');
+            if (participants.size === 0) {
+                listEl.innerText = "Ingen påmeldte ennå...";
+            } else {
+                // Sorterer listen alfabetisk for bedre oversikt
+                const sorted = Array.from(participants).sort();
+                listEl.innerHTML = sorted.map((u, i) => `${i+1}. ⚡ ${u}`).join("<br>");
+            }
+            document.getElementById('list-modal').style.display = 'flex';
+        }
+
         function ownerAnswer(isYes) {
             document.getElementById('owner-modal').style.display = 'none';
             if (isYes) {
                 dbg("DOBBEL GIVEAWAY BEKREFTET! 🎁🔥", true);
-                confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
-            } else {
-                dbg("Ingen dobbel giveaway denne gangen. 😅");
+                confetti({ particleCount: 150, spread: 70, origin: { y: 0.6 } });
             }
         }
 
