@@ -6,9 +6,9 @@
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <style>
         :root { --p: #9146ff; --a: #00f2ff; --bg: #0e0e10; }
-        body { background: var(--bg); color: white; font-family: 'Inter', sans-serif; text-align: center; padding: 20px; }
+        body { background: var(--bg); color: white; font-family: 'Inter', sans-serif; text-align: center; padding: 20px; margin: 0; }
         
-        .card { background: #18181b; padding: 30px; border-radius: 24px; border: 2px solid var(--p); max-width: 450px; margin: auto; box-shadow: 0 15px 35px rgba(0,0,0,0.7); }
+        .card { background: #18181b; padding: 30px; border-radius: 24px; border: 2px solid var(--p); max-width: 450px; margin: auto; box-shadow: 0 15px 35px rgba(0,0,0,0.7); position: relative; }
         
         h1 { background: linear-gradient(to right, var(--p), var(--a)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-size: 2.5rem; margin-bottom: 10px; font-weight: 900; }
         .stats { font-size: 5rem; font-weight: 900; color: var(--a); margin: 10px 0; text-shadow: 0 0 20px rgba(0, 242, 255, 0.3); }
@@ -20,8 +20,15 @@
         .user-list { background: rgba(0,0,0,0.3); padding: 15px; border-radius: 10px; min-height: 40px; color: #888; font-family: monospace; margin-bottom: 15px; }
         #debug { background: #000; color: #0f0; padding: 10px; height: 100px; overflow-y: auto; text-align: left; font-size: 11px; margin-top: 20px; border-radius: 8px; border: 1px solid #222; font-family: monospace; opacity: 0.8; }
         
-        #winner-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.95); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; }
-        .winner-name { font-size: 6rem; color: var(--a); text-shadow: 0 0 50px var(--a); font-weight: 900; margin: 20px 0; }
+        /* Overlay-stiler for Vinner og Eier-spørsmål */
+        .overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.95); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; animation: fadeIn 0.3s; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+
+        .modal { background: #1c1c21; border: 2px solid var(--a); padding: 40px; border-radius: 20px; max-width: 400px; box-shadow: 0 0 50px rgba(0, 242, 255, 0.2); }
+        .modal h2 { margin-top: 0; color: var(--a); }
+        .modal-btns { display: flex; gap: 10px; margin-top: 25px; }
+        .btn-yes { background: #2ecc71; color: white; border: none; padding: 15px; border-radius: 10px; cursor: pointer; flex: 1; font-weight: bold; }
+        .btn-no { background: #e74c3c; color: white; border: none; padding: 15px; border-radius: 10px; cursor: pointer; flex: 1; font-weight: bold; }
     </style>
 </head>
 <body>
@@ -33,21 +40,28 @@
 
     <div id="app" style="display:none;" class="card">
         <h2 id="chan-display" style="color:var(--p); margin:0; letter-spacing: 2px;">KANAL</h2>
-        <input type="text" id="cmd" value="!join" title="Kommando for å bli med">
-        
+        <input type="text" id="cmd" value="!join">
         <div class="stats" id="count">0</div>
         <div style="font-size: 0.8rem; color: #555; letter-spacing: 3px; font-weight: bold; margin-bottom: 10px;">DELTAKERE</div>
-        
-        <div class="user-list" id="users">Venter på første deltaker...</div>
-        
+        <div class="user-list" id="users">Venter...</div>
         <button class="btn" onclick="draw()">TREKK EN VINNER!</button>
-        
         <div id="debug"></div>
     </div>
 
-    <div id="winner-overlay" onclick="this.style.display='none'">
+    <div id="owner-modal" class="overlay">
+        <div class="modal">
+            <h2>HEHE! 😎</h2>
+            <p id="owner-msg" style="font-size: 1.2rem; line-height: 1.5;">Dobbel giveaway om du vinner, siden du joiner giveawayen selv? hehe</p>
+            <div class="modal-btns">
+                <button class="btn-yes" onclick="ownerAnswer(true)">JA, SELVFØLGELIG!</button>
+                <button class="btn-no" onclick="ownerAnswer(false)">NEI...</button>
+            </div>
+        </div>
+    </div>
+
+    <div id="winner-overlay" class="overlay" onclick="this.style.display='none'">
         <div style="letter-spacing: 10px; color: var(--p); font-weight: bold;">VINNEREN ER</div>
-        <h1 class="winner-name" id="winner-name">?</h1>
+        <h1 style="font-size: 6rem; color: var(--a); text-shadow: 0 0 50px var(--a); margin: 20px 0;" id="winner-name">?</h1>
         <p style="color: #444;">Trykk hvor som helst for å lukke</p>
     </div>
 
@@ -70,7 +84,6 @@
         if (token) {
             document.getElementById('login-screen').style.display = 'none';
             document.getElementById('app').style.display = 'block';
-            
             fetch('https://api.twitch.tv/helix/users', {
                 headers: { 'Authorization': `Bearer ${token}`, 'Client-Id': CID }
             })
@@ -94,12 +107,11 @@
                 socket.send(`PASS oauth:${tok}`);
                 socket.send(`NICK ${chan}`);
                 socket.send(`JOIN #${chan}`);
-                dbg("KLAR! Lytter etter kommando i chatten.");
+                dbg("KLAR!");
             };
 
             socket.onmessage = (event) => {
                 const data = event.data;
-                
                 if (data.includes('PING :tmi.twitch.tv')) {
                     socket.send('PONG :tmi.twitch.tv');
                     return;
@@ -112,49 +124,39 @@
                     const trigger = document.getElementById('cmd').value.trim().toLowerCase();
 
                     if (msg === trigger) {
-                        // SJEKK FOR EIER (POPS UP PÅ SKJERMEN DIN)
+                        // SJEKK FOR EIER - VIS MODAL
                         if (user === chan.toLowerCase() && !participants.has(user)) {
-                            const extra = confirm("Ser du har joinet din egen giveaway, blir det dobbel giveaway om du vinner nå? 🤔🎁");
-                            if (extra) {
-                                dbg("DOBBEL GIVEAWAY BEKREFTET! 🎁🔥", true);
-                            } else {
-                                dbg("Eier joinet uten dobbel giveaway.");
-                            }
+                            document.getElementById('owner-modal').style.display = 'flex';
                         }
 
                         if (!participants.has(user)) {
                             participants.add(user);
                             document.getElementById('count').innerText = participants.size;
                             document.getElementById('users').innerText = Array.from(participants).join(", ");
-                            dbg(`${user} ble med i trekningen!`);
+                            dbg(`${user} ble med!`);
                         }
                     }
                 }
             };
+        }
 
-            socket.onclose = () => dbg("Tilkobling mistet. Last inn siden på nytt.");
+        function ownerAnswer(isYes) {
+            document.getElementById('owner-modal').style.display = 'none';
+            if (isYes) {
+                dbg("DOBBEL GIVEAWAY BEKREFTET! 🎁🔥", true);
+                confetti({ particleCount: 100, spread: 70, origin: { y: 0.6 } });
+            } else {
+                dbg("Ingen dobbel giveaway denne gangen. 😅");
+            }
         }
 
         function draw() {
-            if (participants.size === 0) return alert("Ingen deltakere har meldt seg på ennå!");
-            
+            if (participants.size === 0) return alert("Ingen deltakere!");
             const arr = Array.from(participants);
             const winner = arr[Math.floor(Math.random() * arr.length)];
-            
             document.getElementById('winner-name').innerText = winner;
             document.getElementById('winner-overlay').style.display = 'flex';
-            
-            confetti({
-                particleCount: 200,
-                spread: 90,
-                origin: { y: 0.6 },
-                colors: ['#9146ff', '#00f2ff', '#ffffff']
-            });
-
-            setTimeout(() => {
-                confetti({ particleCount: 100, angle: 60, spread: 55, origin: { x: 0 } });
-                confetti({ particleCount: 100, angle: 120, spread: 55, origin: { x: 1 } });
-            }, 500);
+            confetti({ particleCount: 300, spread: 100, origin: { y: 0.6 } });
         }
     </script>
 </body>
