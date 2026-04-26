@@ -3,186 +3,273 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Twitch Giveaway Pro</title>
+    <title>Twitch Giveaway Master</title>
     <script src="https://cdn.jsdelivr.net/npm/comfy.js@1.1.6/dist/comfy.min.js"></script>
     <style>
         :root {
-            --primary: #9146ff;
+            --twitch: #9146ff;
+            --twitch-dark: #6441a5;
             --accent: #00f2ff;
             --bg: #0e0e10;
-            --card-bg: #18181b;
+            --card: #18181b;
+            --text: #efeff1;
         }
 
         body {
-            font-family: 'Inter', sans-serif;
             background-color: var(--bg);
-            color: white;
+            color: var(--text);
+            font-family: 'Inter', system-ui, -apple-system, sans-serif;
             margin: 0;
             display: flex;
-            align-items: center;
             justify-content: center;
+            align-items: center;
             min-height: 100vh;
-            overflow: hidden;
         }
 
-        /* Login / Setup Skjerm */
-        #setup-screen {
-            position: fixed;
-            inset: 0;
-            background: var(--bg);
-            z-index: 100;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
-            transition: opacity 0.5s ease;
-        }
-
-        .login-card {
-            background: var(--card-bg);
-            padding: 3rem;
-            border-radius: 20px;
-            border: 1px solid var(--primary);
-            text-align: center;
-            box-shadow: 0 0 30px rgba(145, 70, 255, 0.3);
-        }
-
-        input {
-            background: #000;
-            border: 2px solid #333;
-            color: white;
-            padding: 12px 20px;
-            border-radius: 10px;
-            font-size: 1.1rem;
-            margin: 1rem 0;
-            width: 250px;
-            outline: none;
-        }
-
-        input:focus { border-color: var(--primary); }
-
-        /* Hovedgrensesnitt (skjult før login) */
-        #main-app {
-            display: none;
-            width: 100%;
-            max-width: 800px;
-            text-align: center;
-            z-index: 10;
-        }
-
-        /* --- Stil-elementer fra forrige svar --- */
         .container {
-            background: var(--card-bg);
+            width: 100%;
+            max-width: 500px;
+            background: var(--card);
+            border-radius: 16px;
             padding: 30px;
-            border-radius: 20px;
-            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 20px 50px rgba(0,0,0,0.5);
+            border: 1px solid #2d2d31;
+            text-align: center;
         }
 
-        .btn {
-            background: var(--primary);
+        h1 { font-size: 1.8rem; margin-bottom: 1.5rem; color: var(--twitch); text-transform: uppercase; letter-spacing: 2px; }
+
+        /* Login Button */
+        .btn-login {
+            background: var(--twitch);
+            color: white;
+            padding: 15px 30px;
+            border-radius: 8px;
+            text-decoration: none;
+            font-weight: bold;
+            display: inline-block;
+            transition: 0.3s;
+            border: none;
+            cursor: pointer;
+        }
+        .btn-login:hover { background: var(--twitch-dark); transform: translateY(-2px); }
+
+        /* App Layout */
+        #app { display: none; }
+
+        .control-group {
+            text-align: left;
+            margin-bottom: 20px;
+        }
+
+        label { display: block; font-size: 0.75rem; color: #adadb8; margin-bottom: 8px; text-transform: uppercase; font-weight: bold; }
+        
+        input {
+            width: 100%;
+            background: #000;
+            border: 1px solid #333;
+            color: white;
+            padding: 12px;
+            border-radius: 6px;
+            box-sizing: border-box;
+            font-size: 1rem;
+        }
+
+        .stat-grid {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .stat-box {
+            background: #26262c;
+            padding: 15px;
+            border-radius: 10px;
+            border-bottom: 3px solid var(--twitch);
+        }
+
+        .count-val { font-size: 2rem; font-weight: 800; color: var(--accent); }
+
+        /* Participant List */
+        .user-list {
+            height: 200px;
+            overflow-y: auto;
+            background: #0a0a0c;
+            border: 1px solid #333;
+            border-radius: 8px;
+            padding: 10px;
+            text-align: left;
+            margin-bottom: 20px;
+        }
+
+        .user-entry {
+            padding: 8px;
+            border-bottom: 1px solid #1f1f23;
+            color: #adadb8;
+            font-size: 0.9rem;
+            animation: slideIn 0.3s ease;
+        }
+
+        @keyframes slideIn { from { opacity: 0; transform: translateX(-10px); } to { opacity: 1; transform: translateX(0); } }
+
+        .btn-draw {
+            width: 100%;
+            background: linear-gradient(45deg, var(--twitch), #bd93f9);
             color: white;
             border: none;
-            padding: 12px 30px;
-            border-radius: 10px;
-            cursor: pointer;
+            padding: 18px;
+            border-radius: 8px;
+            font-size: 1.2rem;
             font-weight: bold;
-            transition: 0.2s;
+            cursor: pointer;
+            box-shadow: 0 4px 15px rgba(145, 70, 255, 0.3);
         }
 
-        .btn:hover { filter: brightness(1.2); }
+        .btn-reset {
+            background: transparent;
+            color: #ff4d4d;
+            border: none;
+            margin-top: 15px;
+            cursor: pointer;
+            text-decoration: underline;
+        }
 
+        /* Winner Modal */
         #winner-overlay {
             position: fixed;
-            top: 0; left: 0; width: 100%; height: 100%;
-            background: rgba(0,0,0,0.9);
+            inset: 0;
+            background: rgba(0,0,0,0.95);
             display: none;
             flex-direction: column;
-            align-items: center;
             justify-content: center;
-            z-index: 200;
+            align-items: center;
+            z-index: 1000;
         }
 
-        .confetti { position: absolute; width: 10px; height: 10px; background: var(--accent); }
+        .winner-card {
+            text-align: center;
+            animation: winnerPop 0.5s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes winnerPop { from { transform: scale(0.5); } to { transform: scale(1); } }
     </style>
 </head>
 <body>
 
-    <div id="setup-screen">
-        <div class="login-card">
-            <h2 style="margin-top:0">Twitch Giveaway Connect</h2>
-            <p style="color: #adadb8">Skriv inn kanalnavnet ditt for å starte</p>
-            <input type="text" id="channel-input" placeholder="Brukernavn på Twitch...">
-            <br>
-            <button class="btn" onclick="connectToTwitch()">KOBLE TIL</button>
+    <div class="container">
+        <div id="login-screen">
+            <h1>Giveaway Master</h1>
+            <p style="color: #adadb8; margin-bottom: 30px;">Koble til din Twitch-kanal for å starte trekningen.</p>
+            <button class="btn-login" onclick="startAuth()">LOGG INN MED TWITCH</button>
         </div>
-    </div>
 
-    <div id="main-app">
-        <div class="container">
-            <h1 id="live-header">Kanal: --</h1>
-            <p>Kommando: <span style="color:var(--accent); font-weight:bold">!join</span></p>
+        <div id="app">
+            <h1 id="user-display">Dashboard</h1>
             
-            <div style="font-size: 4rem; font-weight: 900; margin: 20px 0;">
-                <span id="count">0</span>
+            <div class="control-group">
+                <label>Kommando (f.eks. !join)</label>
+                <input type="text" id="cmd-input" value="!join">
             </div>
-            <p style="text-transform: uppercase; letter-spacing: 2px">Deltakere påmeldt</p>
-            
-            <button class="btn" style="font-size: 1.5rem; margin-top: 20px;" onclick="startDraw()">TREKK EN VINNER</button>
+
+            <div class="stat-grid">
+                <div class="stat-box">
+                    <label>Deltakere</label>
+                    <div id="count" class="count-val">0</div>
+                </div>
+                <div class="stat-box">
+                    <label>Status</label>
+                    <div id="status" style="color: #00ff88; font-weight: bold; margin-top: 10px;">LIVE</div>
+                </div>
+            </div>
+
+            <label>Siste påmeldte</label>
+            <div id="list" class="user-list"></div>
+
+            <button class="btn-draw" onclick="pickWinner()">TREKK EN VINNER!</button>
+            <button class="btn-reset" onclick="resetList()">Nullstill liste</button>
         </div>
     </div>
 
     <div id="winner-overlay" onclick="this.style.display='none'">
-        <h2 style="color: var(--primary); letter-spacing: 5px">VINNEREN ER:</h2>
-        <h1 id="winner-name" style="font-size: 5rem; text-shadow: 0 0 30px var(--accent);">---</h1>
-        <p>Trykk hvor som helst for å lukke</p>
+        <div class="winner-card">
+            <h2 style="color: var(--twitch); letter-spacing: 5px;">GRATULERER</h2>
+            <h1 id="winner-name" style="font-size: 5rem; margin: 10px 0; color: var(--accent); text-shadow: 0 0 30px var(--accent);">--</h1>
+            <p style="color: #666;">Trykk hvor som helst for å gå tilbake</p>
+        </div>
     </div>
 
     <script>
+        const CLIENT_ID = "hgjkg95nbtdf895h49dax8vwkahydc"; 
+        const REDIRECT_URI = window.location.origin + window.location.pathname;
         let participants = new Set();
-        let currentChannel = "";
 
-        function connectToTwitch() {
-            const input = document.getElementById('channel-input').value.trim();
-            if (!input) return alert("Vennligst skriv et kanalnavn");
+        // 1. Sjekk for token i URL
+        const params = new URLSearchParams(window.location.hash.replace("#", "?"));
+        const token = params.get("access_token");
 
-            currentChannel = input;
-            
-            // Konfigurer ComfyJS
-            ComfyJS.onChat = (user, message, flags, self, extra) => {
-                if (message.toLowerCase() === "!join") {
-                    if (!participants.has(user)) {
-                        participants.add(user);
-                        document.getElementById('count').innerText = participants.size;
-                        playJoinSound(); // Valgfritt: legg til lyd her
-                    }
-                }
-            };
-
-            ComfyJS.onConnected = () => {
-                document.getElementById('setup-screen').style.opacity = '0';
-                setTimeout(() => {
-                    document.getElementById('setup-screen').style.display = 'none';
-                    document.getElementById('main-app').style.display = 'block';
-                    document.getElementById('live-header').innerText = "LIVE: " + currentChannel;
-                }, 500);
-            };
-
-            ComfyJS.Init(currentChannel);
+        if (token) {
+            showApp(token);
         }
 
-        function startDraw() {
-            if (participants.size === 0) return alert("Ingen har blitt med ennå!");
+        function startAuth() {
+            const url = `https://id.twitch.tv/oauth2/authorize?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=token&scope=chat:read`;
+            window.location.href = url;
+        }
 
-            const list = Array.from(participants);
-            const winner = list[Math.floor(Math.random() * list.length)];
+        function showApp(token) {
+            document.getElementById('login-screen').style.display = 'none';
+            document.getElementById('app').style.display = 'block';
 
+            // Hent brukerinfo fra Twitch
+            fetch('https://api.twitch.tv/helix/users', {
+                headers: { 'Authorization': `Bearer ${token}`, 'Client-Id': CLIENT_ID }
+            })
+            .then(res => res.json())
+            .then(data => {
+                const username = data.data[0].login;
+                document.getElementById('user-display').innerText = username;
+                initChat(username, token);
+            });
+        }
+
+        function initChat(channel, token) {
+            ComfyJS.onChat = (user, msg) => {
+                const cmd = document.getElementById('cmd-input').value.trim().toLowerCase();
+                if (msg.toLowerCase() === cmd && !participants.has(user)) {
+                    participants.add(user);
+                    updateUI();
+                }
+            };
+            ComfyJS.Init(channel, null, token);
+        }
+
+        function updateUI() {
+            const listDiv = document.getElementById('list');
+            const countDiv = document.getElementById('count');
+            
+            countDiv.innerText = participants.size;
+            
+            // Oppdater liste (viser de 50 siste for å ikke lagge)
+            const users = Array.from(participants).reverse().slice(0, 50);
+            listDiv.innerHTML = users.map(u => `<div class="user-entry">⚡ ${u}</div>`).join('');
+        }
+
+        function pickWinner() {
+            if (participants.size === 0) return alert("Ingen deltakere i listen!");
+            
+            const arr = Array.from(participants);
+            const winner = arr[Math.floor(Math.random() * arr.length)];
+            
             document.getElementById('winner-name').innerText = winner;
             document.getElementById('winner-overlay').style.display = 'flex';
         }
 
-        function playJoinSound() {
-            // Her kan du legge inn en kort "pling"-lyd hvis du vil
-            console.log("Ny deltaker!");
+        function resetList() {
+            if (confirm("Vil du tømme listen helt?")) {
+                participants.clear();
+                updateUI();
+            }
         }
     </script>
 </body>
