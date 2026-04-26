@@ -2,58 +2,47 @@
 <html lang="no">
 <head>
     <meta charset="UTF-8">
-    <title>M00RTEN Giveaway - Owner Alert</title>
+    <title>M00RTEN Giveaway</title>
     <script src="https://cdn.jsdelivr.net/npm/comfy.js@1.1.6/dist/comfy.min.js"></script>
     <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
     <style>
-        :root { --p: #9146ff; --a: #00f2ff; --bg: #0e0e10; }
-        body { background: var(--bg); color: white; font-family: 'Inter', sans-serif; text-align: center; padding: 20px; }
-        .card { background: #18181b; padding: 30px; border-radius: 20px; border: 1px solid var(--p); max-width: 500px; margin: auto; box-shadow: 0 10px 30px rgba(0,0,0,0.5); }
-        h1 { background: linear-gradient(to right, var(--p), var(--a)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; font-size: 2.5rem; margin-bottom: 10px; }
-        input { width: 100%; padding: 15px; background: #000; border: 1px solid #333; color: white; border-radius: 10px; font-size: 1.2rem; margin: 15px 0; box-sizing: border-box; text-align: center; }
-        .stats { font-size: 4rem; font-weight: 900; color: var(--a); margin: 10px 0; }
-        .user-list { background: rgba(0,0,0,0.3); padding: 15px; border-radius: 10px; min-height: 50px; text-align: left; max-height: 150px; overflow-y: auto; font-family: monospace; border: 1px solid #222; }
-        .btn { background: var(--p); color: white; border: none; padding: 20px; border-radius: 12px; cursor: pointer; font-weight: bold; width: 100%; font-size: 1.2rem; margin-top: 20px; transition: 0.2s; }
-        .btn:hover { transform: scale(1.02); filter: brightness(1.2); }
-        #log { background: #000; color: #0f0; padding: 10px; height: 100px; overflow-y: auto; text-align: left; font-size: 11px; margin-top: 20px; border-radius: 5px; border: 1px solid #222; }
-        #winner-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.95); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 1000; }
+        body { background: #0e0e10; color: white; font-family: sans-serif; text-align: center; padding-top: 50px; }
+        .container { background: #18181b; padding: 40px; border-radius: 20px; border: 2px solid #9146ff; display: inline-block; min-width: 400px; }
+        .count { font-size: 5rem; font-weight: bold; color: #00f2ff; margin: 20px 0; }
+        .btn { background: #9146ff; border: none; color: white; padding: 15px 30px; border-radius: 10px; font-weight: bold; cursor: pointer; width: 100%; font-size: 1.2rem; }
+        #log { background: black; color: lime; padding: 10px; font-family: monospace; font-size: 12px; height: 100px; overflow-y: auto; margin-top: 20px; text-align: left; }
+        #winner-overlay { position: fixed; inset: 0; background: rgba(0,0,0,0.9); display: none; flex-direction: column; align-items: center; justify-content: center; z-index: 100; }
     </style>
 </head>
 <body>
 
-    <div id="login-screen" class="card" style="margin-top: 100px;">
-        <h1>GIVEAWAY</h1>
-        <button class="btn" onclick="login()">LOGG INN MED TWITCH</button>
+    <div id="login-screen">
+        <button class="btn" onclick="login()" style="width: auto;">LOGG INN MED TWITCH</button>
     </div>
 
-    <div id="app" style="display:none;" class="card">
-        <h2 id="chan-display" style="margin:0; color: var(--p);">KANAL</h2>
-        <input type="text" id="cmd" value="!join">
-        <div class="stats" id="count">0</div>
-        <div style="font-size: 0.8rem; color: gray; letter-spacing: 2px;">DELTAKERE</div>
-        <div class="user-list" id="users">Ingen påmeldte...</div>
-        <button class="btn" onclick="draw()">TREKK VINNER!</button>
-        <div id="log"></div>
+    <div id="app" style="display:none;">
+        <div class="container">
+            <h1 id="display-name">KANAL</h1>
+            <input type="text" id="cmd" value="!join" style="width:100%; padding:10px; text-align:center; font-size:1.2rem; margin-bottom:10px;">
+            <div class="count" id="count-val">0</div>
+            <div id="user-list" style="text-align:left; margin-bottom:20px; color: #aaa;">Venter på deltakere...</div>
+            <button class="btn" onclick="pickWinner()">TREKK VINNER!</button>
+            <div id="log"></div>
+        </div>
     </div>
 
     <div id="winner-overlay" onclick="this.style.display='none'">
-        <h2 style="color: var(--p); letter-spacing: 5px;">VINNEREN ER:</h2>
-        <h1 style="font-size: 6rem; color: var(--a); text-shadow: 0 0 30px var(--a);" id="winner-name">?</h1>
-        <p style="color: #444;">Trykk for å lukke</p>
+        <h1 style="font-size: 5rem; color: #00f2ff;" id="winner-text">?</h1>
+        <p>Gratulerer! (Klikk for å lukke)</p>
     </div>
 
     <script>
-        const CID = "amd8hpskhqo4pqchmhdvis0j7gbes7";
-        const URI = window.location.origin + window.location.pathname;
+        const CLIENT_ID = "amd8hpskhqo4pqchmhdvis0j7gbes7";
+        const REDIRECT_URI = "https://m00rten.github.io/Giveaway/";
         let participants = new Set();
-        let channelOwner = "";
+        let myName = "";
 
-        const log = (msg, color = "#0f0") => {
-            const d = document.getElementById('log');
-            d.innerHTML += `> <span style="color:${color}">${msg}</span><br>`;
-            d.scrollTop = d.scrollHeight;
-        };
-
+        // Sjekk om vi er logget inn
         const token = new URLSearchParams(window.location.hash.replace("#", "?")).get("access_token");
 
         if (token) {
@@ -61,69 +50,59 @@
             document.getElementById('app').style.display = 'block';
             
             fetch('https://api.twitch.tv/helix/users', {
-                headers: { 'Authorization': `Bearer ${token}`, 'Client-Id': CID }
+                headers: { 'Authorization': `Bearer ${token}`, 'Client-Id': CLIENT_ID }
             })
             .then(r => r.json())
             .then(data => {
-                channelOwner = data.data[0].login;
-                document.getElementById('chan-display').innerText = channelOwner.toUpperCase();
-                startChat(channelOwner, token);
+                myName = data.data[0].login;
+                document.getElementById('display-name').innerText = myName.toUpperCase();
+                initTwitch(myName, token);
             });
         }
 
         function login() {
-            window.location.href = `https://id.twitch.tv/oauth2/authorize?client_id=${CID}&redirect_uri=${encodeURIComponent(URI)}&response_type=token&scope=chat:read`;
+            window.location.href = `https://id.twitch.tv/oauth2/authorize?client_id=${CLIENT_ID}&redirect_uri=${encodeURIComponent(REDIRECT_URI)}&response_type=token&scope=chat:read`;
         }
 
-        function startChat(channel, tok) {
+        function initTwitch(user, tok) {
+            const logEl = document.getElementById('log');
+            logEl.innerHTML += "> Kobler til chat...<br>";
+
             ComfyJS.onChat = (user, msg) => {
+                logEl.innerHTML += `> ${user}: ${msg}<br>`;
+                logEl.scrollTop = logEl.scrollHeight;
+
                 const trigger = document.getElementById('cmd').value.trim().toLowerCase();
-                
                 if (msg.toLowerCase() === trigger) {
-                    // SJEKK OM DET ER EIEREN SOM JOINER
-                    if (user.toLowerCase() === channelOwner.toLowerCase() && !participants.has(user)) {
-                        const answer = confirm("Ser du har joinet din egen giveaway, blir det ekstra giveaway om du vinner? 🤔🎁");
-                        if (answer) {
-                            log("EKSTRA GIVEAWAY BEKREFTET! 🎁🔥", "#00f2ff");
-                        } else {
-                            log("Ingen ekstra giveaway denne gangen. 😅");
-                        }
+                    // EIER-SJEKK
+                    if (user.toLowerCase() === myName.toLowerCase() && !participants.has(user)) {
+                        const extra = confirm("Ser du har joinet din egen giveaway, blir det ekstra giveaway om du vinner? 🤔🎁");
+                        if (extra) logEl.innerHTML += "<span style='color:cyan'>> EKSTRA GIVEAWAY AKTIVERT! 🎁</span><br>";
                     }
 
                     if (!participants.has(user)) {
                         participants.add(user);
-                        updateUI();
-                        log(`LAGT TIL: ${user}`);
+                        document.getElementById('count-val').innerText = participants.size;
+                        document.getElementById('user-list').innerText = Array.from(participants).join(", ");
                     }
                 }
             };
+
+            ComfyJS.onConnected = () => { logEl.innerHTML += "> KLAR! Skriv i chatten.<br>"; };
             
-            ComfyJS.onConnected = () => log("TILKOBLET! Alt fungerer.");
-            ComfyJS.Init(channel, tok);
+            // Vi prøver å initiere UTEN token først for å se om det hjelper på Brave
+            ComfyJS.Init(user); 
         }
 
-        function updateUI() {
-            document.getElementById('count').innerText = participants.size;
-            document.getElementById('users').innerHTML = Array.from(participants).map(u => `<div>⚡ ${u}</div>`).join("");
-        }
-
-        function draw() {
-            if(participants.size === 0) return alert("Ingen deltakere!");
+        function pickWinner() {
+            if (participants.size === 0) return alert("Ingen deltakere!");
             const arr = Array.from(participants);
             const winner = arr[Math.floor(Math.random() * arr.length)];
-            
-            document.getElementById('winner-name').innerText = winner;
+            document.getElementById('winner-text').innerText = winner;
             document.getElementById('winner-overlay').style.display = 'flex';
             
-            // Konfetti-regn
-            var end = Date.now() + (4 * 1000);
-            var colors = ['#9146ff', '#00f2ff', '#ffffff'];
-
-            (function frame() {
-              confetti({ particleCount: 3, angle: 60, spread: 55, origin: { x: 0 }, colors: colors });
-              confetti({ particleCount: 3, angle: 120, spread: 55, origin: { x: 1 }, colors: colors });
-              if (Date.now() < end) { requestAnimationFrame(frame); }
-            }());
+            // Konfetti
+            confetti({ particleCount: 200, spread: 70, origin: { y: 0.6 } });
         }
     </script>
 </body>
